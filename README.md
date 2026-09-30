@@ -2,7 +2,7 @@
 ## Быстрый старт
 
 ```bash
-git clone https://github.com/whocares26/ais_lab1.git
-cd ais_lab1
+git clone https://github.com/whocares26/ais_lab.git
+cd ais_lab
 ./script.sh
 ```
