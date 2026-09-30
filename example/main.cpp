@@ -209,7 +209,13 @@ int main() {
                 }
                 break;
             }
-
+            case 7: {
+                workingMemory.clear();
+                std::cout << "ВЫБОР ЦЕЛЕВОЙ СИТУАЦИИ\n";
+                db::Fact goal = readFact(*knowledgeBase);
+                
+                break;
+            }
             case 0:
                 return 0;
         }
