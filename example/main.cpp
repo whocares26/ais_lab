@@ -5,12 +5,15 @@
 #include "db/KnowledgeBase.hpp"
 #include "db/WorkingMemory.hpp"
 #include "engine/ForwardChainer.hpp"
+#include "engine/BackwardChainer.hpp"
 #include "engine/ReadChoice.hpp"
 #include "engine/Colors.hpp"
 
 // Выбор объекта и его значения. Возвращает собранный факт.
-db::Fact readFact(db::KnowledgeBase& kb) {
-    std::cout << "Выберите существующий объект или создайте свой:\n";
+// allowCreate = false — только существующие объекты и значения (для целевой ситуации).
+db::Fact readFact(db::KnowledgeBase& kb, bool allowCreate = true) {
+    std::cout << (allowCreate ? "Выберите существующий объект или создайте свой:\n"
+                              : "Выберите объект:\n");
 
     std::vector<std::string> names;
     for (const auto& pair : kb.getObjects())
@@ -18,10 +21,11 @@ db::Fact readFact(db::KnowledgeBase& kb) {
 
     for (int i = 0; i < names.size(); i++)
         std::cout << i + 1 << ". " << names[i] << "\n";
-    std::cout << names.size() + 1 << ". Создать свой\n";
+    if (allowCreate)
+        std::cout << names.size() + 1 << ". Создать свой\n";
 
     std::string objName;
-    int input = readChoice(1, names.size() + 1);
+    int input = readChoice(1, names.size() + (allowCreate ? 1 : 0));
 
     if (input == names.size() + 1) {
         std::cout << GREEN << "Введите имя объекта: " << RESET;
@@ -59,12 +63,14 @@ db::Fact readFact(db::KnowledgeBase& kb) {
 
     const auto& obj = kb.getObjects().at(objName);
 
-    std::cout << "Выберите существующее значение или создайте своё:\n";
+    std::cout << (allowCreate ? "Выберите существующее значение или создайте своё:\n"
+                              : "Выберите значение:\n");
     for (int j = 0; j < obj.m_values.size(); j++)
         std::cout << j + 1 << ". " << obj.m_values[j] << "\n";
-    std::cout << obj.m_values.size() + 1 << ". Ввести новое значение\n";
+    if (allowCreate)
+        std::cout << obj.m_values.size() + 1 << ". Ввести новое значение\n";
 
-    int valueChoice = readChoice(1, obj.m_values.size() + 1);
+    int valueChoice = readChoice(1, obj.m_values.size() + (allowCreate ? 1 : 0));
 
     if (valueChoice == obj.m_values.size() + 1) {
         std::cout << GREEN << "Введите новое значение: " << RESET;
@@ -87,6 +93,7 @@ int main() {
     }
     db::WorkingMemory workingMemory(*knowledgeBase);
     engine::ForwardChainer chainer(*knowledgeBase, workingMemory);
+    engine::BackwardChainer backChainer(*knowledgeBase, workingMemory);
 
     while (true) {
         std::cout << CYAN << BOLD << "\n=== Экспертная система ===" << RESET << "\n"
@@ -95,10 +102,11 @@ int main() {
                   << "3. Изменить правило\n"
                   << "4. Удалить правило\n"
                   << "5. Показать стартовую ситуацию\n"
-                  << "6. Запустить вывод\n"
+                  << "6. Запустить прямой вывод\n"
+                  << "7. Проверить цель (обратный вывод)\n"
                   << "0. Выход\n";
 
-        int choice = readChoice(0, 6);
+        int choice = readChoice(0, 7);
         switch (choice) {
             case 1: {
                 for (const auto& rule : knowledgeBase->getRules())
@@ -211,9 +219,16 @@ int main() {
             }
             case 7: {
                 workingMemory.clear();
-                std::cout << "ВЫБОР ЦЕЛЕВОЙ СИТУАЦИИ\n";
-                db::Fact goal = readFact(*knowledgeBase);
-                
+                std::cout << YELLOW << BOLD << "ВЫБОР ЦЕЛЕВОЙ СИТУАЦИИ" << RESET << "\n";
+                db::Fact goal = readFact(*knowledgeBase, false);
+
+                std::cout << CYAN << BOLD << "\n=== Обратный вывод ===" << RESET << "\n";
+                backChainer.run(goal);
+
+                std::cout << CYAN << BOLD << "\n=== Рабочая база данных ===" << RESET << "\n";
+                for (const auto& obj : workingMemory.getMemory())
+                    for (const auto& val : obj.second)
+                        std::cout << obj.first << " = " << val << "\n";
                 break;
             }
             case 0:

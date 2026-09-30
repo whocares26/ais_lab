@@ -19,6 +19,7 @@ add_executable(${PROJECT_NAME}
     src/db/KnowledgeBase.cpp
     src/db/WorkingMemory.cpp
     src/engine/ForwardChainer.cpp
+    src/engine/BackwardChainer.cpp
 )
 
 target_include_directories(${PROJECT_NAME} PRIVATE include)

@@ -7,6 +7,7 @@
 #include "db/WorkingMemory.hpp"
 #include "engine/BackwardChainer.hpp"
 #include "engine/ReadChoice.hpp"
+#include "engine/Colors.hpp"
 #include <iostream>
 
 namespace engine {
@@ -38,9 +39,9 @@ namespace engine {
 
             std::cout << "\n";
             if (proved)
-                std::cout << "ЦЕЛЬ ДОСТИЖИМА: " << toString(goal) << "\n";
+                std::cout << GREEN << BOLD << "ЦЕЛЬ ДОСТИЖИМА: " << toString(goal) << RESET << "\n";
             else
-                std::cout << "ЦЕЛЬ НЕ ДОСТИЖИМА: " << toString(goal) << "\n";
+                std::cout << RED << BOLD << "ЦЕЛЬ НЕ ДОСТИЖИМА: " << toString(goal) << RESET << "\n";
 
             return proved;
         }
@@ -54,6 +55,15 @@ namespace engine {
             if (m_wm.hasFact(goal.m_object, goal.m_value)) {
                 std::cout << indent << "  известно\n";
                 return true;
+            }
+
+            // однозначный объект уже имеет другое значение — цель противоречит рабочей бд
+            const auto& objects = m_kb.getObjects();
+            auto it = objects.find(goal.m_object);
+            if (it != objects.end() && !it->second.m_multi && m_wm.isKnown(goal.m_object)) {
+                std::cout << indent << "  противоречит известному факту "
+                          << goal.m_object << "=" << *m_wm.getMemory().at(goal.m_object).begin() << "\n";
+                return false;
             }
 
             // цель уже доказывается
@@ -80,8 +90,13 @@ namespace engine {
                     }
                 }
 
+                // пока доказывались условия, объект мог получить другое значение
+                if (allProved && m_wm.addFact(goal) == db::FactAddResult::Conflict) {
+                    std::cout << indent << "  правило " << rule.m_id << " противоречит рабочей бд\n";
+                    allProved = false;
+                }
+
                 if (allProved) {
-                    m_wm.addFact(goal);
                     m_in_progress.erase(key);
                     std::cout << indent << "  доказано правилом " << rule.m_id << "\n";
                     return true;
@@ -89,8 +104,6 @@ namespace engine {
             }
 
             // запрос пользователю тк правил нет
-            const auto& objects = m_kb.getObjects();
-            auto it = objects.find(goal.m_object);
             if (it != objects.end() && !it->second.m_prompt.empty()
                 && m_unknown.count(goal.m_object) == 0
                 && !m_wm.isKnown(goal.m_object)) {
