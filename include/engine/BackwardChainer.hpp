@@ -11,7 +11,7 @@ namespace engine {
     public:
         BackwardChainer(const db::KnowledgeBase& kb, db::WorkingMemory& wm) : m_kb(kb), m_wm(wm) {}
         bool run(const db::Fact& goal);
-        bool askUser(const std::string& objName);
+        bool askUser(const std::string& objName, const std::string& indent = "");
     private:
         const db::KnowledgeBase& m_kb;
         std::unordered_set<std::string> m_in_progress;
